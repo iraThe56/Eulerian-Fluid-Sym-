@@ -121,16 +121,17 @@ int main()
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    // for (int y = 0; y < bufferHeight; y++) {
-    //     for (int x = 0; x < bufferWidth; x++) {
-    //
-    //         int shiftedX = x -bufferWidth / 2;
-    //         int shiftedY = y -bufferHeight / 2;
-    //         uint8_t value=round(sin((sqrt((shiftedX*shiftedX)&shiftedY*shiftedY))/10));
-    //         last_cell_buffer.set_next_cell_value(value);
-    //
-    //         }
-    // }
+    for (int y = 0; y < bufferHeight; y++) {
+        for (int x = 0; x < bufferWidth; x++) {
+
+            int shiftedX = x -bufferWidth / 2;
+            int shiftedY = y -bufferHeight / 2;
+            // uint8_t value=round(sin((sqrt((shiftedX*shiftedX)&shiftedY*shiftedY))/10));
+
+            last_cell_buffer.set_next_cell_value(x||y);
+
+            }
+    }
 
 
 
