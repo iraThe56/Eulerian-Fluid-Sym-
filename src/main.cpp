@@ -9,6 +9,7 @@
 #include "core/FPSCounter.h"
 #include "core/GameBoard.h"
 #include "core/imgui/ImguiManager.h"
+#include "core/FluidSim.h"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -111,27 +112,15 @@ int main()
     int last_number=0;
     glfwInit();
 
-    int value= -7;
-    int mod_value=5;
-    int result= value % mod_value;
-
 
 
  // cell state buffer
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    for (int y = 0; y < bufferHeight; y++) {
-        for (int x = 0; x < bufferWidth; x++) {
+    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,0);
 
-            int shiftedX = x -bufferWidth / 2;
-            int shiftedY = y -bufferHeight / 2;
-            // uint8_t value=round(sin((sqrt((shiftedX*shiftedX)&shiftedY*shiftedY))/10));
 
-            last_cell_buffer.set_next_cell_value(x||y);
-
-            }
-    }
 
 
 
@@ -162,8 +151,16 @@ int main()
 
 
         if (imgui->shouldDraw[0]) {
-            last_cell_buffer.add_cell_value(int(xpos*scaled_x),int((1-ypos)*scaled_y),120);
-            current_cell_buffer.add_cell_value(int(xpos*scaled_x),int((1-ypos)*scaled_y),120);
+            int x_val=int(xpos*scaled_x);
+            int y_val=int((1-ypos)*(-1*scaled_y));
+
+            if (x_val<=window_width && x_val>=1 && y_val<=window_height && y_val>=0) {
+                fluidsim.setPressureValueP(x_val,y_val,255);
+                fluidsim.setPressureValueC(x_val,y_val,255);
+
+            }
+
+
         }
         // float Kernel[9]=[1,1,1, 1,1,1, 1,1,1];
 
@@ -181,50 +178,15 @@ int main()
                 for (int y = 0; y < height; y++) {
                     for (int x = 0; x < width; x++) {
 
-                        int numberOfNearbyCells=0;
-                        float curent_cell_value=last_cell_buffer.return_next_cell_value();
-                        float conductivity= .03;
-                        current_cell_buffer.set_cell_value(x,y,curent_cell_value);
-
-                        // do the corners
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,-1,-1) - curent_cell_value) / 1.414f)); // NW neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,1,-1)   - curent_cell_value) / 1.414f)); // NE neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,-1,1)   - curent_cell_value) / 1.414f)); // SW neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,1,1)    - curent_cell_value) / 1.414f)); // SE neighbor
-
-                        // do the edges (direct neighbors, distance factor 1)
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,0,-1)  - curent_cell_value))); // North neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,1,0)   - curent_cell_value))); // East neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,-1,0)  - curent_cell_value))); // West neighbor
-                        current_cell_buffer.add_cell_value(x,y,(conductivity*(last_cell_buffer.return_neighbor_cell_value(x,y,0,1)   - curent_cell_value))); // South neighbor
 
 
-
-
-
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,0,-1);
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,1,-1);
-                        //
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,-1,0);
-                        //
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,1,0);
-                        //
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,-1,1);
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,0,1);
-                        // numberOfNearbyCells += last_cell_buffer.return_neighbor_cell_value(x,y,1,1);
-
-                        // current_cell_buffer.set_next_cell_value(curent_cell_value);
 
 
                     }
                 }
-                last_cell_buffer.set_current_index(0,0);
-                current_cell_buffer.set_current_index(0,0);
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width; x++) {
-                        last_cell_buffer.set_next_cell_value(current_cell_buffer.return_next_cell_value());
-                    }
-                }
+                fluidsim.defusePressure(imgui->timestep[0]);
+                fluidsim.swapCurrentArrayWithPrevious();
+
 
                 last_number=timePassed;
             }
@@ -237,18 +199,10 @@ int main()
         for (int y = 0; y < bufferHeight; y++) {
             for (int x = 0; x < bufferWidth; x++) {
                 int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
-
-
-                int value=1;
-                int value2=0;
-
-                int moved_x=x-150;
-                int moved_y=y-150;
-
-                value=current_cell_buffer.return_next_cell_value();
-                if (value>255) {
-                    value=255;
-                }
+                int value=fluidsim.getPressureValueC(x,y);
+                // if (value>100) {
+                //     value=255;
+                // }
 
                 imageData[index] = value;     // Red
                 imageData[index + 1] =value ; // Green

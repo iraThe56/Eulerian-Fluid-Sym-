@@ -12,7 +12,9 @@ file(GLOB_RECURSE SOURCES
         "src/*.h"
 )
 
-add_executable(OpenGLSetup ${SOURCES})
+add_executable(OpenGLSetup ${SOURCES}
+        src/core/FluidSim.cpp
+        src/core/FluidSim.h)
 
 # Put the exe in build/<CONFIG> (Debug/Release)
 set_target_properties(OpenGLSetup PROPERTIES

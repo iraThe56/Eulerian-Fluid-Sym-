@@ -10,6 +10,7 @@ public:
 
     bool* shouldUpdate = new bool(false);
     bool* shouldDraw = new bool(false);
+    float* timestep= new float(0.1f);
 
     void init(GLFWwindow *window );
     void render();
