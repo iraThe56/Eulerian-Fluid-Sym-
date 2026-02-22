@@ -33,6 +33,13 @@ void ImguiManager::render() {
     ImGui::Text("It works!");
     ImGui::Checkbox("Should Update?", shouldUpdate);
     ImGui::Checkbox("Should Draw?", shouldDraw);
+
+    if (ImGui::Button("Reset")) {
+        shouldReset=true;
+    }
+
+
+
     ImGui::DragFloat("timestep",timestep,.006);
     ImGui::End();
 

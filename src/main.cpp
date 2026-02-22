@@ -5,6 +5,8 @@
 #include "shader.h"
 #define STB_IMAGE_IMPLEMENTATION
 
+#include <imgui.h>
+
 #include "stb_image.h"
 #include "core/FPSCounter.h"
 #include "core/GameBoard.h"
@@ -124,6 +126,7 @@ int main()
 
 
 
+
     double xpos, ypos;
     int window_width, window_height;
     while (!glfwWindowShouldClose(window))
@@ -135,6 +138,7 @@ int main()
         timePassed=(glfwGetTimerValue()/(glfwGetTimerFrequency()/20));
 
         fpsCounter.calculate_fps();
+
 
 
 
@@ -150,6 +154,7 @@ int main()
         float scaled_y =float(current_cell_buffer.return_height())/float( window_height);
 
 
+
         if (imgui->shouldDraw[0]) {
             int x_val=int(xpos*scaled_x);
             int y_val=int((1-ypos)*(-1*scaled_y));
@@ -162,7 +167,13 @@ int main()
 
 
         }
-        // float Kernel[9]=[1,1,1, 1,1,1, 1,1,1];
+
+
+        if (imgui->shouldReset==true)
+        {
+            fluidsim.reset();
+            imgui->shouldReset=false;
+        }
 
 
 
@@ -170,20 +181,22 @@ int main()
 
         if (imgui->shouldUpdate[0]) {
             if (last_number<timePassed) {
+                //
+                // int width=current_cell_buffer.return_width();
+                // int height=current_cell_buffer.return_height();
+                // last_cell_buffer.set_current_index(0,0);
+                // current_cell_buffer.set_current_index(0,0);
+                // // for (int y = 0; y < height; y++) {
+                // //     for (int x = 0; x < width; x++) {
+                // //
+                // //
+                // //     }
+                // // }
 
-                int width=current_cell_buffer.return_width();
-                int height=current_cell_buffer.return_height();
-                last_cell_buffer.set_current_index(0,0);
-                current_cell_buffer.set_current_index(0,0);
-                for (int y = 0; y < height; y++) {
-                    for (int x = 0; x < width; x++) {
 
 
 
 
-
-                    }
-                }
                 fluidsim.defusePressureImplicit(imgui->timestep[0]);
                 fluidsim.swapCurrentArrayWithPrevious();
 
@@ -228,8 +241,9 @@ int main()
         blitShader.use();
         glBindVertexArray(blitVAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
         imgui->render();
+
+
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------

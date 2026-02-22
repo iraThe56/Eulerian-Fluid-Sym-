@@ -15,6 +15,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     sim_width=width;
     sim_height=height;
     k=1.2;
+    startingCondition =startingConditions;
     //used for creating and indexing the arrays
     numDimensions=2;
     //calculating the array peramaters
@@ -43,62 +44,8 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
 
     //setting initial values
     /// setting padding values
-    // applyPaddingStyle();
-    if (paddingStyle == 0) {
-        for (int i=0;i<pressureArrayLength;i++) {
-            pressureValuesP[i]=0;
-        }
-        for (int i=0;i<velocityArrayLength;i++) {
-            velocityValuesP[i]=0;
-        }
-
-    }
-    if (paddingStyle==1) {
-        for (int i=0;i<=pressureArrayLength;i++) {
-            pressureValuesP[i]=255;
-        }
-        for (int i=0;i<velocityArrayLength;i++) {
-            velocityValuesP[i]=255;
-        }
-
-    }
-    if (startingConditions==0) {
-        for (int y = 0; y < sim_height; y++) {
-            for (int x = 0; x < sim_width; x++) {
-                setPressureValueP(x,y,0);
-                setVelocityValueC(x,y,0,35);
-                setVelocityValueC(x,y,1,35);
-
-            }
-        }
-    }
-    if (startingConditions==1) {
-        for (int y = 0; y < sim_height; y++) {
-            for (int x = 0; x < sim_width; x++) {
-                setPressureValueP(x,y,(x*y%255));
-                setVelocityValueC(x,y,0,35);
-                setVelocityValueC(x,y,1,35);
-            }
-        }
-    }
-    if (startingConditions==2) {
-        for (int y = 0; y < sim_height; y++) {
-            for (int x = 0; x < sim_width; x++) {
-                if (x<10&&y<10) {
-                    setPressureValueP(x,y,255);
-                    setVelocityValueC(x,y,0,35);
-                    setVelocityValueC(x,y,1,35);
-                }
-                else {
-                    setPressureValueP(x,y,0);
-                    setVelocityValueC(x,y,0,35);
-                    setVelocityValueC(x,y,1,35);
-                }
-            }
-        }
-    }
-
-
+    applyPaddingStyle(paddingStyle);
+    applyStartingConditions(startingCondition);
 
     std::copy_n(velocityValuesP, velocityArrayLength, velocityValuesC);
     std::copy_n(pressureValuesP, pressureArrayLength, pressureValuesC);
@@ -199,30 +146,30 @@ void FluidSim::defusePressureImplicit(const float dt) const {
 
 
 
-void FluidSim::applyPaddingStyle() {
-    if (paddingStyle==0) {
+void FluidSim::applyPaddingStyle(const int paddingStyle) const {
+    if (paddingStyle == 0) {
         for (int i=0;i<pressureArrayLength;i++) {
-            pressureValuesC[i]=0;
+            pressureValuesP[i]=0;
         }
         for (int i=0;i<velocityArrayLength;i++) {
-            velocityValuesC[i]=0;
+            velocityValuesP[i]=0;
         }
 
     }
     if (paddingStyle==1) {
-        for (int i=0;i<pressureArrayLength;i++) {
-            pressureValuesC[i]=255;
+        for (int i=0;i<=pressureArrayLength;i++) {
+            pressureValuesP[i]=255;
         }
         for (int i=0;i<velocityArrayLength;i++) {
-            velocityValuesC[i]=0;
+            velocityValuesP[i]=255;
         }
 
     }
 
 }
-void FluidSim::applyStartingConditions() {
+void FluidSim::applyStartingConditions( int startingCondition) const {
 
-    if (startingConditions==0) {
+    if (startingCondition==0) {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 setPressureValueP(x,y,0);
@@ -232,7 +179,7 @@ void FluidSim::applyStartingConditions() {
             }
         }
     }
-    if (startingConditions==1) {
+    if (startingCondition==1) {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 setPressureValueP(x,y,(x*y%255));
@@ -241,7 +188,7 @@ void FluidSim::applyStartingConditions() {
             }
         }
     }
-    if (startingConditions==2) {
+    if (startingCondition==2) {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 if (x<10&&y<10) {
@@ -259,6 +206,18 @@ void FluidSim::applyStartingConditions() {
     }
 
 }
+
+// reset the sim
+// reset the sim
+void FluidSim::reset() const {
+    applyPaddingStyle(paddingStyle);
+    applyStartingConditions(startingCondition);
+
+    std::copy_n(velocityValuesP, velocityArrayLength, velocityValuesC);
+    std::copy_n(pressureValuesP, pressureArrayLength, pressureValuesC);
+}
+
+
 
 
 

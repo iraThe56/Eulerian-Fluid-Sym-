@@ -20,15 +20,16 @@ class FluidSim {
     float* velocityValuesP;
     uint32_t* cellBehavior;
     // first a way of telling cells how to act and if they should update
-    void applyPaddingStyle();
-    void applyStartingConditions();
+    void applyPaddingStyle(int paddingStyle) const;
+    void applyStartingConditions(int startingConditions) const;
     void applyCellBehavior();
 
 
 
     // setting up the starting conditions and the reset function
-    int startingConditions{};
-    void reset();
+
+
+ void reset() const;
 
     //calculate indexes including padding and without padding
     // int calculateIndexPadded(int x,int y) const;
@@ -72,7 +73,7 @@ class FluidSim {
 
 
 // update functions
-    void updateFluidSim();
+    void updateFluidSim()const;
     private:
 
 
@@ -89,6 +90,8 @@ class FluidSim {
 
     float k;
     int paddingStyle;
+    int startingCondition;
+
     int cellBehaviorState;
     int numSettlingIterations;
 
