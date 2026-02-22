@@ -57,7 +57,8 @@ class FluidSim {
 
     // basic sim
     void updatePressureValues(float dt) const;
-    void defusePressure(float dt) const;
+    void defusePressureExplicit(float dt) const;
+    void defusePressureImplicit(float dt) const;
 
 
     // void updateVelocityValues(int x,int y,int dimension) const;
@@ -89,6 +90,7 @@ class FluidSim {
     float k;
     int paddingStyle;
     int cellBehaviorState;
+    int numSettlingIterations;
 
 };
 

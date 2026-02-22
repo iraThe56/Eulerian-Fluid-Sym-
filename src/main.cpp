@@ -118,7 +118,7 @@ int main()
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,0);
+    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,1);
 
 
 
@@ -184,7 +184,7 @@ int main()
 
                     }
                 }
-                fluidsim.defusePressure(imgui->timestep[0]);
+                fluidsim.defusePressureImplicit(imgui->timestep[0]);
                 fluidsim.swapCurrentArrayWithPrevious();
 
 

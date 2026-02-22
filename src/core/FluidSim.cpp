@@ -24,6 +24,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
 
     array_width= sim_width+2*padding;
     array_height= sim_height+2*padding;
+    numSettlingIterations=10;
 
 
     // to acount for using a stagered grid we must add one to both x and y for the velcotie valyes
@@ -169,7 +170,7 @@ void FluidSim::swapCurrentArrayWithPrevious() {
 ///implementing basic functions
 ///
 
-void FluidSim::defusePressure(const float dt) const {
+void FluidSim::defusePressureExplicit(const float dt) const {
     for (int i=0;i<sim_width;i++) {
         for (int j=0;j<sim_height;j++) {
 
@@ -180,6 +181,21 @@ void FluidSim::defusePressure(const float dt) const {
         }
     }
 }
+void FluidSim::defusePressureImplicit(const float dt) const {
+    for (int iter = 0; iter < numSettlingIterations; iter++){
+        for (int i=0;i<sim_width;i++) {
+            for (int j=0;j<sim_height;j++) {
+                const int index=calculatePresureIndex(i,j);
+                if ((cellBehavior[index]&0b00000001)!=1) {
+                    pressureValuesC[index]=(pressureValuesP[index]+k*dt*((pressureValuesC[index+1]+pressureValuesC[index-1]+pressureValuesC[index-array_width]+pressureValuesC[index+array_width])/4))/(1+k*dt);
+                }
+
+            }
+        }
+    }
+}
+
+
 
 
 
