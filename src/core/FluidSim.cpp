@@ -5,6 +5,7 @@
 #include "FluidSim.h"
 
 #include <algorithm>
+#include <iostream>
 #include <stdexcept>
 
 #include "glm/ext/quaternion_geometric.hpp"
@@ -22,6 +23,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     padding=10;
     paddingStyle=1;
     cellBehaviorState=0;
+    acelerationBehavior=1;
 
     array_width= sim_width+2*padding;
     array_height= sim_height+2*padding;
@@ -71,10 +73,10 @@ int FluidSim::calculatePresureIndex(const int x, const int y) const {
     return (y+padding) * array_width +(x+padding);
 }
 int FluidSim::calculateVelocityIndex(const int x, const int y) const {
-    if (x<0||x>array_width-1||y<0||y>array_height-1) {
-        throw std::out_of_range("FluidSim::calculateVelocityIndex");
-    }
-    return x+1 * array_width*numDimensions + y+1;
+    // if (x<0||x>array_width-1||y<0||y>array_height-1) {
+    //     throw std::out_of_range("FluidSim::calculateVelocityIndex");
+    // }
+    return (y+padding) * (array_width*numDimensions) +(numDimensions*x+padding*numDimensions);
 }
 
 
@@ -93,6 +95,8 @@ float FluidSim::getPressureValueP(const int x,const int y) const {
 float FluidSim::getVelocityValueP(const int x,const int y,const int dimension) const {
     return velocityValuesP[calculateVelocityIndex(x,y)+dimension];
 }
+
+
 // setting values
 void FluidSim::setPressureValueC(const int x,const int y,const float value) const {
     pressureValuesC[calculatePresureIndex(x,y)]=value;
@@ -104,8 +108,12 @@ void FluidSim::setPressureValueP(const int x,const int y,const float value) cons
     pressureValuesP[calculatePresureIndex(x,y)]=value;
 }
 void FluidSim::setVelocityValueP(const int x,const int y,const int dimension,const float value) const {
-    velocityValuesP[calculateVelocityIndex(x,y)]=value;
+    velocityValuesP[calculateVelocityIndex(x,y)+dimension]=value;
 }
+void FluidSim::setAcelerationBehavior(int newAcelerationBehavior) {
+    acelerationBehavior=newAcelerationBehavior;
+}
+
 
 // swap buffers (shoudl only be called at the end to an update
 void FluidSim::swapCurrentArrayWithPrevious() {
@@ -130,9 +138,9 @@ void FluidSim::defusePressureExplicit(const float dt) const {
 }
 void FluidSim::defusePressureImplicit(const float dt) const {
     for (int iter = 0; iter < numSettlingIterations; iter++){
-        for (int i=0;i<sim_width;i++) {
-            for (int j=0;j<sim_height;j++) {
-                const int index=calculatePresureIndex(i,j);
+        for (int y = 0; y < sim_height; y++) {
+            for (int x = 0; x < sim_width; x++) {
+                const int index=calculatePresureIndex(x,y);
                 if ((cellBehavior[index]&0b00000001)!=1) {
                     pressureValuesC[index]=(pressureValuesP[index]+k*dt*((pressureValuesC[index+1]+pressureValuesC[index-1]+pressureValuesC[index-array_width]+pressureValuesC[index+array_width])/4))/(1+k*dt);
                 }
@@ -141,6 +149,48 @@ void FluidSim::defusePressureImplicit(const float dt) const {
         }
     }
 }
+
+// void FluidSim::applyIncompressibility( int timestep) const {
+//     for (int y = 0; y < sim_height; y++) {
+//         for (int x = 0; x < sim_width; x++) {
+//             sumOfCells=
+//
+//
+//         }
+//     }
+//
+//
+// }
+
+
+// void FluidSim::defuseVelocityImplicit(const float dt) const {
+//     for (int iter = 0; iter < numSettlingIterations; iter++){
+//         for (int i=0;i<sim_width;i++) {
+//             for (int j=0;j<sim_height;j++) {
+//                 const int index=calculateVelocityIndex(i,j);
+//                 if ((cellBehavior[index]&0b00000001)!=1) {
+//                     velocityValuesC[index]=(velocityValuesP[index]+k*dt*((velocityValuesC[index+2]+velocityValuesC[index-2])/2))/(1+k*dt);
+//                     velocityValuesC[index+1]=(velocityValuesP[index+1]+k*dt*((velocityValuesC[index-array_width]+velocityValuesC[index+array_width])/2))/(1+k*dt);
+//                 }
+//
+//             }
+//         }
+//     }
+// }
+
+void FluidSim::applyAcelerations(int dt) {
+    if (1==1) {
+        for (int y = 0; y < sim_height; y++) {
+            for (int x = 0; x < sim_width; x++) {
+                setVelocityValueP(x,y,0,(getVelocityValueC(x,y,0)));
+                setVelocityValueP(x,y,1,(getVelocityValueC(x,y,1)+(3*dt)));
+            }
+        }
+    }
+
+
+}
+
 
 
 
@@ -157,11 +207,11 @@ void FluidSim::applyPaddingStyle(const int paddingStyle) const {
 
     }
     if (paddingStyle==1) {
-        for (int i=0;i<=pressureArrayLength;i++) {
+        for (int i=0;i<pressureArrayLength;i++) {
             pressureValuesP[i]=255;
         }
         for (int i=0;i<velocityArrayLength;i++) {
-            velocityValuesP[i]=255;
+            velocityValuesP[i]=0;
         }
 
     }
@@ -173,8 +223,8 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 setPressureValueP(x,y,0);
-                setVelocityValueC(x,y,0,35);
-                setVelocityValueC(x,y,1,35);
+                setVelocityValueP(x,y,0,35);
+                setVelocityValueP(x,y,1,35);
 
             }
         }
@@ -183,8 +233,8 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 setPressureValueP(x,y,(x*y%255));
-                setVelocityValueC(x,y,0,35);
-                setVelocityValueC(x,y,1,35);
+                setVelocityValueP(x,y,0,(0));
+                setVelocityValueP(x,y,1,(x*y%255));
             }
         }
     }
@@ -193,13 +243,13 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
             for (int x = 0; x < sim_width; x++) {
                 if (x<10&&y<10) {
                     setPressureValueP(x,y,255);
-                    setVelocityValueC(x,y,0,35);
-                    setVelocityValueC(x,y,1,35);
+                    setVelocityValueP(x,y,0,35);
+                    setVelocityValueP(x,y,1,35);
                 }
                 else {
                     setPressureValueP(x,y,0);
-                    setVelocityValueC(x,y,0,35);
-                    setVelocityValueC(x,y,1,35);
+                    setVelocityValueP(x,y,0,35);
+                    setVelocityValueP(x,y,1,35);
                 }
             }
         }

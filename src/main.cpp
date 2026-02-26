@@ -193,11 +193,16 @@ int main()
                 // //     }
                 // // }
 
+                // fluidsim.updateVelocity();
+
+
 
 
 
 
                 fluidsim.defusePressureImplicit(imgui->timestep[0]);
+                fluidsim.applyAcelerations(imgui->timestep[0]);
+                // fluidsim.defuseVelocityImplicit(imgui->timestep[0]);
                 fluidsim.swapCurrentArrayWithPrevious();
 
 
@@ -209,18 +214,47 @@ int main()
 
 
         current_cell_buffer.set_current_index(0,0);
-        for (int y = 0; y < bufferHeight; y++) {
-            for (int x = 0; x < bufferWidth; x++) {
-                int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
-                int value=fluidsim.getPressureValueC(x,y);
-                // if (value>100) {
-                //     value=255;
-                // }
+        if (imgui->renderPressure[0]) {
+            imgui->renderVelocity[0]=false;
+            for (int y = 0; y < bufferHeight; y++) {
+                for (int x = 0; x < bufferWidth; x++) {
+                    int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
 
-                imageData[index] = value;     // Red
-                imageData[index + 1] =value ; // Green
-                imageData[index + 2] = value; // Blue
-                imageData[index + 3] = 255; // Alpha
+                    int value=fluidsim.getPressureValueC(x,y);
+
+
+
+                    imageData[index] = value;     // Red
+                    imageData[index + 1] =value ; // Green
+                    imageData[index + 2] = value; // Blue
+                    imageData[index + 3] = 255; // Alpha
+                }
+            }
+        }
+        if (imgui->renderVelocity[0]) {
+            imgui->renderPressure[0]=false;
+            for (int y = 0; y < bufferHeight; y++) {
+                for (int x = 0; x < bufferWidth; x++) {
+                    int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
+
+                    int rvalue=fluidsim.getVelocityValueC(x,y,0);
+                    int gvalue=fluidsim.getVelocityValueC(x,y,1);
+                    // int bvalue=fluidsim.getVelocityValueC(x,y,2);
+                    if (rvalue>=255) {
+                        rvalue=255;
+                    }
+                    if (gvalue>=255) {
+                        gvalue=255;
+                    }
+
+
+
+
+                    imageData[index] = rvalue;     // Red
+                    imageData[index + 1] =gvalue ; // Green
+                    imageData[index + 2] = 0; // Blue
+                    imageData[index + 3] = 255; // Alpha
+                }
             }
         }
 

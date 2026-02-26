@@ -37,6 +37,8 @@ class FluidSim {
     [[nodiscard]] int calculatePresureIndex(int x,int y) const;
     [[nodiscard]] int calculateVelocityIndex(int x,int y) const ;
 
+    [[nodiscard]] int calculateBehaviorIndex(int x,int y) const;
+
     // returning values
 
     [[nodiscard]] float getPressureValueC(int x,int y) const;
@@ -52,7 +54,16 @@ class FluidSim {
     void setPressureValueP(int x,int y,float value) const;
     void setVelocityValueP(int x,int y,int dimension, float value) const;
 
+
+
+
+
     void swapCurrentArrayWithPrevious();
+
+    void applyAcelerations(int timestep);
+    void updateVelocity();
+
+    void applyIncompressibility(int timestep) const ;
 
 
 
@@ -60,6 +71,9 @@ class FluidSim {
     void updatePressureValues(float dt) const;
     void defusePressureExplicit(float dt) const;
     void defusePressureImplicit(float dt) const;
+    void defuseVelocityImplicit(float dt) const;
+
+    void setAcelerationBehavior(int newAcelerationBehavior);
 
 
     // void updateVelocityValues(int x,int y,int dimension) const;
@@ -94,6 +108,8 @@ class FluidSim {
 
     int cellBehaviorState;
     int numSettlingIterations;
+
+    int acelerationBehavior;
 
 };
 
