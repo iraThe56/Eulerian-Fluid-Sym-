@@ -71,9 +71,6 @@ class FluidSim {
  void overrideNumSettlingIterations(int newNumSettlingIterations);
 
 
-
-
-
     void swapCurrentArrayWithPrevious();
 
     void applyAcelerations(float dt) const;

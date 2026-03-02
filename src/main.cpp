@@ -120,7 +120,7 @@ int main()
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,3);
+    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,1);
 
 
 
@@ -155,7 +155,8 @@ int main()
 
         if (imgui->shouldDraw[0]) {
             int x_val=int(xpos*scaled_x);
-            int y_val=int((1-ypos)*(-1*scaled_y));
+            // int y_val=int((1-ypos)*(-1*scaled_y));
+            int y_val=int(((window_height)-ypos)*(scaled_y));
 
             if (x_val<=window_width && x_val>=1 && y_val<=window_height && y_val>=0) {
                 fluidsim.setPressureValueP(x_val,y_val,255);
@@ -204,10 +205,12 @@ int main()
 
 
                 fluidsim.defusePressureImplicit(timeStep);
-                fluidsim.advectVelocityAndPressure(timeStep);
+
                 fluidsim.applyAcelerations(timeStep);
-                fluidsim.applyIncompressibility(timeStep);
+
                 fluidsim.advectVelocityAndPressure(timeStep);
+
+                fluidsim.applyIncompressibility(timeStep);
                 // fluidsim.defuseVelocityImplicit(timeStep);
                 fluidsim.swapCurrentArrayWithPrevious();
 

@@ -21,7 +21,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     numDimensions=2;
     //calculating the array peramaters
     padding=10;
-    paddingStyle=2;
+    paddingStyle=0;
     cellBehaviorState=0;
     acelerationBehavior=1;
 
@@ -84,8 +84,9 @@ int FluidSim::calculateBehaviorIndex(int x, int y) const {
     // if (x<0||x>array_width-1||y<0||y>array_height-1) {
     //     throw std::out_of_range("FluidSim::calculateBehaviorIndex");
     // }
-    return (y + padding) * array_width + (x + padding);
+    return (y+padding) * array_width +(x+padding);
 }
+
 
 
 ///getting and setting values
@@ -178,6 +179,9 @@ void FluidSim::applyIncompressibility( int timestep) const {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 int numOfNearbyActiveCells=0;
+                if (getCellBehavior(x,y,0)==1) {
+
+
                 //cheeck sorunoung 4 cells
                 numOfNearbyActiveCells += getCellBehavior(x-1, y, 1);
                 numOfNearbyActiveCells += getCellBehavior(x+1, y, 1);
@@ -210,6 +214,7 @@ void FluidSim::applyIncompressibility( int timestep) const {
                     // Bottom face needs to push up (negative Y direction)
                     setVelocityValueC(x, y+1, 1, bottomVelocity - divergenceToEachCell);
                 }
+                }
 
 
 
@@ -225,87 +230,87 @@ void FluidSim::applyIncompressibility( int timestep) const {
 #include <cmath>     // for std::floor
 #include <algorithm> // for std::max, std::min
 
-float FluidSim::interpolateVelocity(float x, float y, int dimension) const {
-    // 1. Adjust for staggered grid offsets
-    float x_adj = x;
-    float y_adj = y;
+    float FluidSim::interpolateVelocity(float x, float y, int dimension) const {
+        // 1. Adjust for staggered grid offsets
+        float x_adj = x;
+        float y_adj = y;
 
-    if (dimension == 0) {
-        // u is at (i, j + 0.5). To make j + 0.5 look like an integer, shift query down.
-        y_adj -= 0.5f;
-    } else {
-        // v is at (i + 0.5, j). To make i + 0.5 look like an integer, shift query left.
-        x_adj -= 0.5f;
+        if (dimension == 0) {
+            // u is at (i, j + 0.5). To make j + 0.5 look like an integer, shift query down.
+            y_adj -= 0.5f;
+        } else {
+            // v is at (i + 0.5, j). To make i + 0.5 look like an integer, shift query left.
+            x_adj -= 0.5f;
+        }
+
+        // 2. Find the bottom-left integer corner (i0, j0)
+        // std::floor is safer than (int) for negative coordinates near padding
+        int i0 = static_cast<int>(std::floor(x_adj));
+        int j0 = static_cast<int>(std::floor(y_adj));
+
+        // 3. Compute relative fractional distances (weights) tx, ty
+        // This matches x/h and y/h in your image (assuming grid spacing h = 1.0)
+        float tx = x_adj - i0;
+        float ty = y_adj - j0;
+
+        // 4. Neighboring indices
+        int i1 = i0 + 1;
+        int j1 = j0 + 1;
+
+        // Safety: Clamp indices to valid array bounds (including padding)
+        auto clampX = [&](int val) { return std::max(-padding, std::min(val, sim_width + padding)); };
+        auto clampY = [&](int val) { return std::max(-padding, std::min(val, sim_height + padding)); };
+
+        i0 = clampX(i0); i1 = clampX(i1);
+        j0 = clampY(j0); j1 = clampY(j1);
+
+        // 5. Fetch velocity values at the 4 corners
+        float v00 = getVelocityValueP(i0, j0, dimension);
+        float v10 = getVelocityValueP(i1, j0, dimension);
+        float v01 = getVelocityValueP(i0, j1, dimension);
+        float v11 = getVelocityValueP(i1, j1, dimension);
+
+        // 6. Bilinear interpolation formula from your image
+        // w00 = 1-tx, w01 = tx, w10 = 1-ty, w11 = ty
+        float weight00 = (1.0f - tx) * (1.0f - ty);
+        float weight10 = tx * (1.0f - ty);
+        float weight01 = (1.0f - tx) * ty;
+        float weight11 = tx * ty;
+
+        return weight00 * v00 + weight10 * v10 + weight01 * v01 + weight11 * v11;
     }
 
-    // 2. Find the bottom-left integer corner (i0, j0)
-    // std::floor is safer than (int) for negative coordinates near padding
-    int i0 = static_cast<int>(std::floor(x_adj));
-    int j0 = static_cast<int>(std::floor(y_adj));
+    float FluidSim::interpolateDensity(float x, float y) const {
+        // 1. Find the top-left integer corner (i0, j0)
+        int i0 = static_cast<int>(std::floor(x));
+        int j0 = static_cast<int>(std::floor(y));
 
-    // 3. Compute relative fractional distances (weights) tx, ty
-    // This matches x/h and y/h in your image (assuming grid spacing h = 1.0)
-    float tx = x_adj - i0;
-    float ty = y_adj - j0;
+        // 2. Compute fractional weights
+        float tx = x - i0;
+        float ty = y - j0;
 
-    // 4. Neighboring indices
-    int i1 = i0 + 1;
-    int j1 = j0 + 1;
+        int i1 = i0 + 1;
+        int j1 = j0 + 1;
 
-    // Safety: Clamp indices to valid array bounds (including padding)
-    auto clampX = [&](int val) { return std::max(-padding, std::min(val, sim_width + padding)); };
-    auto clampY = [&](int val) { return std::max(-padding, std::min(val, sim_height + padding)); };
+        // Clamp indices to ensure they stay inside the valid array + padding
+        auto clampX = [&](int val) { return std::max(-padding, std::min(val, sim_width + padding - 1)); };
+        auto clampY = [&](int val) { return std::max(-padding, std::min(val, sim_height + padding - 1)); };
 
-    i0 = clampX(i0); i1 = clampX(i1);
-    j0 = clampY(j0); j1 = clampY(j1);
+        i0 = clampX(i0); i1 = clampX(i1);
+        j0 = clampY(j0); j1 = clampY(j1);
 
-    // 5. Fetch velocity values at the 4 corners
-    float v00 = getVelocityValueP(i0, j0, dimension);
-    float v10 = getVelocityValueP(i1, j0, dimension);
-    float v01 = getVelocityValueP(i0, j1, dimension);
-    float v11 = getVelocityValueP(i1, j1, dimension);
+        // 3. Fetch "pressure" (density) values from the 4 corners
+        float d00 = getPressureValueP(i0, j0);
+        float d10 = getPressureValueP(i1, j0);
+        float d01 = getPressureValueP(i0, j1);
+        float d11 = getPressureValueP(i1, j1);
 
-    // 6. Bilinear interpolation formula from your image
-    // w00 = 1-tx, w01 = tx, w10 = 1-ty, w11 = ty
-    float weight00 = (1.0f - tx) * (1.0f - ty);
-    float weight10 = tx * (1.0f - ty);
-    float weight01 = (1.0f - tx) * ty;
-    float weight11 = tx * ty;
-
-    return weight00 * v00 + weight10 * v10 + weight01 * v01 + weight11 * v11;
-}
-
-float FluidSim::interpolateDensity(float x, float y) const {
-    // 1. Find the top-left integer corner (i0, j0)
-    int i0 = static_cast<int>(std::floor(x));
-    int j0 = static_cast<int>(std::floor(y));
-
-    // 2. Compute fractional weights
-    float tx = x - i0;
-    float ty = y - j0;
-
-    int i1 = i0 + 1;
-    int j1 = j0 + 1;
-
-    // Clamp indices to ensure they stay inside the valid array + padding
-    auto clampX = [&](int val) { return std::max(-padding, std::min(val, sim_width + padding - 1)); };
-    auto clampY = [&](int val) { return std::max(-padding, std::min(val, sim_height + padding - 1)); };
-
-    i0 = clampX(i0); i1 = clampX(i1);
-    j0 = clampY(j0); j1 = clampY(j1);
-
-    // 3. Fetch "pressure" (density) values from the 4 corners
-    float d00 = getPressureValueP(i0, j0);
-    float d10 = getPressureValueP(i1, j0);
-    float d01 = getPressureValueP(i0, j1);
-    float d11 = getPressureValueP(i1, j1);
-
-    // 4. Bilinear blend
-    return (1.0f - tx) * (1.0f - ty) * d00 +
-           tx * (1.0f - ty) * d10 +
-           (1.0f - tx) * ty * d01 +
-           tx * ty * d11;
-}
+        // 4. Bilinear blend
+        return (1.0f - tx) * (1.0f - ty) * d00 +
+               tx * (1.0f - ty) * d10 +
+               (1.0f - tx) * ty * d01 +
+               tx * ty * d11;
+    }
 // void FluidSim::advectVelocityAndPressure(const int timestep) const {
 //
 //     for (int y = 0; y < sim_height; y++) {
@@ -318,7 +323,7 @@ float FluidSim::interpolateDensity(float x, float y) const {
 //
 //             float preciousXPosition=x-(velocityX*timestep);
 //             float preciousYPosition=y-(velocityY*timestep);
-
+//
 
 
 void FluidSim::advectVelocityAndPressure(const float timestep) const {
@@ -409,18 +414,22 @@ void FluidSim::applyPaddingStyle(const int paddingStyle) const {
     if (paddingStyle == 0) {
         for (int i=0;i<pressureArrayLength;i++) {
             pressureValuesP[i]=0;
+            cellBehavior[i] = 0;
         }
         for (int i=0;i<velocityArrayLength;i++) {
             velocityValuesP[i]=0;
+
         }
 
     }
     if (paddingStyle==1) {
         for (int i=0;i<pressureArrayLength;i++) {
             pressureValuesP[i]=255;
+            cellBehavior[i] = 0;
         }
         for (int i=0;i<velocityArrayLength;i++) {
             velocityValuesP[i]=0;
+
         }
 
     }
@@ -452,8 +461,11 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
             for (int x = 0; x < sim_width; x++) {
                 setPressureValueP(x,y,(x*y%255));
                 setVelocityValueP(x,y,0,(0));
-                setVelocityValueP(x,y,1,(x*y%255));
+                setVelocityValueP(x,y,1,(x*y%255)/100);
+
                 setCellBehavior(x,y,0b00000001);
+                //warn
+                std::cout << x << " " << y << std::endl;
             }
         }
     }
@@ -475,36 +487,10 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
             }
         }
     }
-    if (startingCondition == 3) { // Lid-Driven Cavity
-        float lidSpeed = 20.0f;
-
-        // 1. First, set EVERY velocity to zero (including padding and far edges)
-        std::fill_n(velocityValuesP, velocityArrayLength, 0.0f);
-        std::fill_n(cellBehavior, pressureArrayLength, 0); // All solid
-
-        for (int y = 0; y < sim_height; y++) {
-            for (int x = 0; x < sim_width; x++) {
-                // Walls are the very first/last pixels of the sim area
-                bool isWall = (x == 0 || x == sim_width - 1 || y == 0 || y == sim_height - 1);
-
-                if (isWall) {
-                    setCellBehavior(x, y, 0); // Solid
-                    if (y == 0) {
-                        // This is the top lid. Give it velocity.
-                        setVelocityValueP(x, y, 0, lidSpeed);
-                    }
-                } else {
-                    setCellBehavior(x, y, 1); // Fluid
-                }
-            }
-        }
-    }
-
 }
 
 
 
-// reset the sim
 // reset the sim
 void FluidSim::reset() const {
     applyPaddingStyle(paddingStyle);
