@@ -47,12 +47,28 @@ class FluidSim {
     [[nodiscard]] float getPressureValueP(int x,int y) const;
     [[nodiscard]] float getVelocityValueP(int x,int y,int dimension) const;
 
+    [[nodiscard]] uint32_t getCellBehavior(int x,int y,int behaviorPart) const;
+
+
+
+
     // setting values
     void setPressureValueC(int x,int y,float value) const;
     void setVelocityValueC(int x,int y,int dimension, float value) const;
 
     void setPressureValueP(int x,int y,float value) const;
     void setVelocityValueP(int x,int y,int dimension, float value) const;
+    void setCellBehavior(int x,int y,uint32_t) const;
+
+    float interpolateVelocity(float x,float y,int dimension) const;
+    float interpolateDensity(float x,float y) const;
+
+    void advectVelocityAndPressure(float timestep) const;
+
+
+    void overrideOverRelaxationValue(float newOverRelaxationValue);
+
+ void overrideNumSettlingIterations(int newNumSettlingIterations);
 
 
 
@@ -60,7 +76,7 @@ class FluidSim {
 
     void swapCurrentArrayWithPrevious();
 
-    void applyAcelerations(int timestep);
+    void applyAcelerations(float dt) const;
     void updateVelocity();
 
     void applyIncompressibility(int timestep) const ;
@@ -108,6 +124,7 @@ class FluidSim {
 
     int cellBehaviorState;
     int numSettlingIterations;
+    float overRelxationValue;
 
     int acelerationBehavior;
 

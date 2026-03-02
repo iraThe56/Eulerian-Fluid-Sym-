@@ -13,13 +13,17 @@ public:
     bool* shouldUpdate = new bool(false);
     bool* shouldDraw = new bool(false);
 
-    bool* renderPressure = new bool(false);
-    bool* renderVelocity = new bool(true);
+
+    int* renderType = new int (0);
+
 
     bool shouldReset = new bool(false);
 
     float* timestep= new float(0.1f);
     int* acelerationType = new int(1) ;
+
+    float* overRelaxationValue = new float(1.9f);
+    int* numOfSettlingItterations=new int(5);
 
 
 

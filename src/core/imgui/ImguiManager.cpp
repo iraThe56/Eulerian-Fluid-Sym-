@@ -34,8 +34,10 @@ void ImguiManager::render() {
     ImGui::Checkbox("Should Update?", shouldUpdate);
     ImGui::Checkbox("Should Draw?", shouldDraw);
 
-    ImGui::Checkbox("Should renderPressure?", renderPressure);
-    ImGui::Checkbox("Should renderVelocity?", renderVelocity);
+
+    ImGui::DragInt("render type",renderType,.01,0,2);
+
+
 
     if (ImGui::Button("Reset")) {
         shouldReset=true;
@@ -44,6 +46,8 @@ void ImguiManager::render() {
 
 
     ImGui::DragFloat("timestep",timestep,.006);
+    ImGui::DragFloat("over relaxation Value",overRelaxationValue,.006,1,4);
+    ImGui::DragInt("number of settling itterations",numOfSettlingItterations,.06,3,30);
     ImGui::DragInt("acelerationType",acelerationType,1,1,2);
     ImGui::End();
 

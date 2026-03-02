@@ -120,7 +120,7 @@ int main()
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,1);
+    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,3);
 
 
 
@@ -144,8 +144,6 @@ int main()
 
         //getting cursor position
         glfwGetCursorPos(window, &xpos, &ypos);
-
-
 
 
         glfwGetWindowSize(window, &window_width, &window_height);
@@ -195,14 +193,22 @@ int main()
 
                 // fluidsim.updateVelocity();
 
+                fluidsim.overrideNumSettlingIterations(imgui->numOfSettlingItterations[0]);
+                fluidsim.overrideOverRelaxationValue(imgui->overRelaxationValue[0]);
 
 
 
 
 
-                fluidsim.defusePressureImplicit(imgui->timestep[0]);
-                fluidsim.applyAcelerations(imgui->timestep[0]);
-                // fluidsim.defuseVelocityImplicit(imgui->timestep[0]);
+                float timeStep = imgui->timestep[0];
+
+
+                fluidsim.defusePressureImplicit(timeStep);
+                fluidsim.advectVelocityAndPressure(timeStep);
+                fluidsim.applyAcelerations(timeStep);
+                fluidsim.applyIncompressibility(timeStep);
+                fluidsim.advectVelocityAndPressure(timeStep);
+                // fluidsim.defuseVelocityImplicit(timeStep);
                 fluidsim.swapCurrentArrayWithPrevious();
 
 
@@ -214,15 +220,12 @@ int main()
 
 
         current_cell_buffer.set_current_index(0,0);
-        if (imgui->renderPressure[0]) {
-            imgui->renderVelocity[0]=false;
+        if (imgui->renderType[0]==0) {
             for (int y = 0; y < bufferHeight; y++) {
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
 
                     int value=fluidsim.getPressureValueC(x,y);
-
-
 
                     imageData[index] = value;     // Red
                     imageData[index + 1] =value ; // Green
@@ -231,23 +234,40 @@ int main()
                 }
             }
         }
-        if (imgui->renderVelocity[0]) {
-            imgui->renderPressure[0]=false;
+        else if (imgui->renderType[0]==1) {
+            for (int y = 0; y < bufferHeight; y++) {
+                for (int x = 0; x < bufferWidth; x++) {
+                    int index = (y * bufferWidth + x) * 4;
+
+
+                    float vx = fluidsim.getVelocityValueC(x,y,0);
+                    float vy = fluidsim.getVelocityValueC(x,y,1);
+
+
+                    int rvalue = static_cast<int>((vx * 2.0f) + 128.0f);
+                    int gvalue = static_cast<int>((vy * 2.0f) + 128.0f);
+
+                    rvalue = std::max(0, std::min(255, rvalue));
+                    gvalue = std::max(0, std::min(255, gvalue));
+
+                    imageData[index] = rvalue;     // Red (X velocity)
+                    imageData[index + 1] = gvalue; // Green (Y velocity)
+                    imageData[index + 2] = 0;      // Blue
+                    imageData[index + 3] = 255;    // Alpha
+                }
+            }
+        }
+        else if (imgui->renderType[0]==2) {
+
             for (int y = 0; y < bufferHeight; y++) {
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
-
-                    int rvalue=fluidsim.getVelocityValueC(x,y,0);
-                    int gvalue=fluidsim.getVelocityValueC(x,y,1);
-                    // int bvalue=fluidsim.getVelocityValueC(x,y,2);
-                    if (rvalue>=255) {
-                        rvalue=255;
-                    }
-                    if (gvalue>=255) {
+                    int result=fluidsim.getCellBehavior(x,y,0);
+                    int gvalue=0;
+                    if (result==0b000001) {
                         gvalue=255;
                     }
-
-
+                    int rvalue=fluidsim.getCellBehavior(x,y,0);
 
 
                     imageData[index] = rvalue;     // Red
