@@ -91,8 +91,8 @@ int main()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    int bufferWidth = 300;
-    int bufferHeight = 300;
+    int bufferWidth = 150;
+    int bufferHeight = 150;
     uint8_t *imageData = new uint8_t[bufferWidth * bufferHeight * 4];
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -159,8 +159,8 @@ int main()
             int y_val=int(((window_height)-ypos)*(scaled_y));
 
             if (x_val<=window_width && x_val>=1 && y_val<=window_height && y_val>=0) {
-                fluidsim.setPressureValueP(x_val,y_val,255);
-                fluidsim.setPressureValueC(x_val,y_val,255);
+                fluidsim.setdyeDensityValueP(x_val,y_val,255);
+                fluidsim.setdyeDensityValueC(x_val,y_val,255);
 
             }
 
@@ -173,6 +173,9 @@ int main()
             fluidsim.reset();
             imgui->shouldReset=false;
         }
+        // if (imgui->shouldResetDye[0]==true) {
+        //
+        // }
 
 
 
@@ -204,14 +207,23 @@ int main()
                 float timeStep = imgui->timestep[0];
 
 
-                fluidsim.defusePressureImplicit(timeStep);
+                // fluidsim.applyAcelerations(timeStep);
+                // fluidsim.defuseVelocityImplicit(timeStep);
+                // fluidsim.defuseDyeDensityImplicit(timeStep);
 
-                fluidsim.applyAcelerations(timeStep);
+                for(int i=0;i<bufferWidth-10;i++) {
+                        fluidsim.setVelocityValueP(i,1,0,10);
+            }
 
-                fluidsim.advectVelocityAndPressure(timeStep);
+
+
+                fluidsim.advectVelocityAndDyeDensity(timeStep);
+
+                // fluidsim.defuseVelocityImplicit(timeStep);
 
                 fluidsim.applyIncompressibility(timeStep);
-                // fluidsim.defuseVelocityImplicit(timeStep);
+
+
                 fluidsim.swapCurrentArrayWithPrevious();
 
 
@@ -228,7 +240,7 @@ int main()
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
 
-                    int value=fluidsim.getPressureValueC(x,y);
+                    int value=fluidsim.getDyeDensityValueC(x,y);
 
                     imageData[index] = value;     // Red
                     imageData[index + 1] =value ; // Green
@@ -243,18 +255,13 @@ int main()
                     int index = (y * bufferWidth + x) * 4;
 
 
-                    float vx = fluidsim.getVelocityValueC(x,y,0);
-                    float vy = fluidsim.getVelocityValueC(x,y,1);
+                    float vx = fluidsim.getVelocityValueC(x,y,0)*30;
+                    float vy = fluidsim.getVelocityValueC(x,y,1)*30;
 
 
-                    int rvalue = static_cast<int>((vx * 2.0f) + 128.0f);
-                    int gvalue = static_cast<int>((vy * 2.0f) + 128.0f);
 
-                    rvalue = std::max(0, std::min(255, rvalue));
-                    gvalue = std::max(0, std::min(255, gvalue));
-
-                    imageData[index] = rvalue;     // Red (X velocity)
-                    imageData[index + 1] = gvalue; // Green (Y velocity)
+                    imageData[index] = vx;     // Red (X velocity)
+                    imageData[index + 1] = vy; // Green (Y velocity)
                     imageData[index + 2] = 0;      // Blue
                     imageData[index + 3] = 255;    // Alpha
                 }

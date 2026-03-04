@@ -42,12 +42,15 @@ void ImguiManager::render() {
     if (ImGui::Button("Reset")) {
         shouldReset=true;
     }
+    if (ImGui::Button("Reset Dye")) {
+        shouldResetDye=true;
+    }
 
 
 
     ImGui::DragFloat("timestep",timestep,.006);
     ImGui::DragFloat("over relaxation Value",overRelaxationValue,.006,1,4);
-    ImGui::DragInt("number of settling itterations",numOfSettlingItterations,.06,3,30);
+    ImGui::DragInt("number of settling itterations",numOfSettlingItterations,.06,3,200);
     ImGui::DragInt("acelerationType",acelerationType,1,1,2);
     ImGui::End();
 

@@ -13,10 +13,10 @@ class FluidSim {
     FluidSim(int width, int height,int startingConditions=0);
     ~FluidSim();
 
-     float* pressureValuesC;
+     float* dyeDensityValuesC;
      float* velocityValuesC;
 
-    float* pressureValuesP;
+    float* dyeDensityValuesP;
     float* velocityValuesP;
     uint32_t* cellBehavior;
     // first a way of telling cells how to act and if they should update
@@ -34,17 +34,17 @@ class FluidSim {
     //calculate indexes including padding and without padding
     // int calculateIndexPadded(int x,int y) const;
 
-    [[nodiscard]] int calculatePresureIndex(int x,int y) const;
+    [[nodiscard]] int calculatedyeDensityIndex(int x,int y) const;
     [[nodiscard]] int calculateVelocityIndex(int x,int y) const ;
 
     [[nodiscard]] int calculateBehaviorIndex(int x,int y) const;
 
     // returning values
 
-    [[nodiscard]] float getPressureValueC(int x,int y) const;
+    [[nodiscard]] float getDyeDensityValueC(int x,int y) const;
     [[nodiscard]] float getVelocityValueC(int x,int y,int dimension) const;
 
-    [[nodiscard]] float getPressureValueP(int x,int y) const;
+    [[nodiscard]] float getDyeDensityValueP(int x,int y) const;
     [[nodiscard]] float getVelocityValueP(int x,int y,int dimension) const;
 
     [[nodiscard]] uint32_t getCellBehavior(int x,int y,int behaviorPart) const;
@@ -53,22 +53,22 @@ class FluidSim {
 
 
     // setting values
-    void setPressureValueC(int x,int y,float value) const;
+    void setdyeDensityValueC(int x,int y,float value) const;
     void setVelocityValueC(int x,int y,int dimension, float value) const;
 
-    void setPressureValueP(int x,int y,float value) const;
+    void setdyeDensityValueP(int x,int y,float value) const;
     void setVelocityValueP(int x,int y,int dimension, float value) const;
     void setCellBehavior(int x,int y,uint32_t) const;
 
     float interpolateVelocity(float x,float y,int dimension) const;
     float interpolateDensity(float x,float y) const;
 
-    void advectVelocityAndPressure(float timestep) const;
+    void advectVelocityAndDyeDensity(float timestep) const;
 
 
     void overrideOverRelaxationValue(float newOverRelaxationValue);
 
- void overrideNumSettlingIterations(int newNumSettlingIterations);
+    void overrideNumSettlingIterations(int newNumSettlingIterations);
 
 
     void swapCurrentArrayWithPrevious();
@@ -78,12 +78,14 @@ class FluidSim {
 
     void applyIncompressibility(int timestep) const ;
 
+    void enforceBoundaries() const;
+
 
 
     // basic sim
-    void updatePressureValues(float dt) const;
-    void defusePressureExplicit(float dt) const;
-    void defusePressureImplicit(float dt) const;
+    void updatedyeDensityValues(float dt) const;
+    void defuseDyeDensityExplicit(float dt) const;
+    void defuseDyeDensityImplicit(float dt) const;
     void defuseVelocityImplicit(float dt) const;
 
     void setAcelerationBehavior(int newAcelerationBehavior);
@@ -110,7 +112,7 @@ class FluidSim {
 
     int array_width;
     int array_height;
-    int pressureArrayLength;
+    int dyeDensityArrayLength;
     int velocityArrayLength;
 
     int numDimensions;

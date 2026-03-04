@@ -19,6 +19,8 @@ public:
 
     bool shouldReset = new bool(false);
 
+    bool shouldResetDye = new bool(false);
+
     float* timestep= new float(0.1f);
     int* acelerationType = new int(1) ;
 
