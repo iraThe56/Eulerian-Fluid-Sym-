@@ -31,23 +31,25 @@ class FluidSim {
 
  void reset() const;
 
-    //calculate indexes including padding and without padding
-    // int calculateIndexPadded(int x,int y) const;
+    //calculate indexes for the arrays this takes into account the padding grid padding
+    // to access padded cells you can go larger or smaller than buffer width and height
+    // but if you do it won't check for you that your reading out into raw memory
 
-    [[nodiscard]] int calculatedyeDensityIndex(int x,int y) const;
-    [[nodiscard]] int calculateVelocityIndex(int x,int y) const ;
+    [[nodiscard]]  int calculateDyeDensityIndex(int x,int y) const;
+    [[nodiscard]]  int calculateVelocityIndex(int x,int y) const ;
 
-    [[nodiscard]] int calculateBehaviorIndex(int x,int y) const;
+    [[nodiscard]]  int calculateBehaviorIndex(int x,int y) const;
 
     // returning values
 
-    [[nodiscard]] float getDyeDensityValueC(int x,int y) const;
-    [[nodiscard]] float getVelocityValueC(int x,int y,int dimension) const;
+    [[nodiscard]]  float getDyeDensityValueC(int x,int y) const;
+    [[nodiscard]]  float getVelocityValueC(int x,int y,int dimension) const;
 
-    [[nodiscard]] float getDyeDensityValueP(int x,int y) const;
-    [[nodiscard]] float getVelocityValueP(int x,int y,int dimension) const;
+    [[nodiscard]]  float getDyeDensityValueP(int x,int y) const;
+    [[nodiscard]]  float getVelocityValueP(int x,int y,int dimension) const;
 
-    [[nodiscard]] uint32_t getCellBehavior(int x,int y,int behaviorPart) const;
+    [[nodiscard]] inline  uint32_t getCellBehavior(int x, int y) const;
+
 
 
 
@@ -79,6 +81,8 @@ class FluidSim {
     void applyIncompressibility(int timestep) const ;
 
     void enforceBoundaries() const;
+
+    void setDyeToZero() const;
 
 
 

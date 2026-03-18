@@ -12,13 +12,21 @@
 #include "core/GameBoard.h"
 #include "core/imgui/ImguiManager.h"
 #include "core/FluidSim.h"
+#include <algorithm>
+
+
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 
 // settings
-unsigned int SCR_WIDTH = 800;
+float sidebarWidth = 350;
+
+
 unsigned int SCR_HEIGHT = 800;
+
+unsigned int SCR_WIDTH = 800+sidebarWidth;
+
 FPSCounter fpsCounter = FPSCounter();
 ImguiManager* imgui = ImguiManager::getInstance();
 
@@ -53,7 +61,7 @@ int main()
         return -1;
     }
 
-    imgui->init(window);
+    imgui->init(window,sidebarWidth);
 
     Shader blitShader("resources/shaders/blit.vsh", "resources/shaders/blit.fsh");
 
@@ -97,10 +105,6 @@ int main()
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, bufferWidth, bufferHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
@@ -116,16 +120,11 @@ int main()
 
 
 
- // cell state buffer
+
     GameBoard current_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
     GameBoard last_cell_buffer =  GameBoard(bufferWidth,bufferHeight);
 
-    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,1);
-
-
-
-
-
+    FluidSim fluidsim = FluidSim(bufferWidth,bufferHeight,4);
 
     double xpos, ypos;
     int window_width, window_height;
@@ -152,36 +151,60 @@ int main()
         float scaled_y =float(current_cell_buffer.return_height())/float( window_height);
 
 
+        int x_val=int(xpos*scaled_x);
+        // int y_val=int((1-ypos)*(-1*scaled_y));
+        int y_val=int(((window_height)-ypos)*(scaled_y));
+        if (imgui->shouldDraw) {
 
-        if (imgui->shouldDraw[0]) {
-            int x_val=int(xpos*scaled_x);
-            // int y_val=int((1-ypos)*(-1*scaled_y));
-            int y_val=int(((window_height)-ypos)*(scaled_y));
 
             if (x_val<=window_width && x_val>=1 && y_val<=window_height && y_val>=0) {
-                fluidsim.setdyeDensityValueP(x_val,y_val,255);
-                fluidsim.setdyeDensityValueC(x_val,y_val,255);
+                fluidsim.setdyeDensityValueP(x_val,y_val,255*20);
+                fluidsim.setdyeDensityValueC(x_val,y_val,255*20);
 
             }
-
-
         }
-
-
         if (imgui->shouldReset==true)
         {
             fluidsim.reset();
             imgui->shouldReset=false;
         }
-        // if (imgui->shouldResetDye[0]==true) {
-        //
-        // }
+        if (imgui->shouldResetDye==true) {
+            fluidsim.setDyeToZero();
+            imgui->shouldResetDye=false;
+
+        }
+
+        if (imgui->shouldHaveWall==true) {
+            for (int y = 0; y < bufferHeight; y++) {
+                for (int x = 0; x < bufferWidth; x++) {
+                    if (((abs((y-y_val)*(y-y_val)+(x-x_val)*(x-x_val))))<40){
+                        fluidsim.setCellBehavior(x,y,0);
+                        // fluidsim.setVelocityValueC(x,y,0,0);
+                        // fluidsim.setVelocityValueC(x,y,1,0);
+                    }
+                    else {
+                        fluidsim.setCellBehavior(x,y,0b00000001);
+                    }
+                }
+            }
+
+        }
+        else if (imgui->shouldHaveWall==false) {
+            // std::cout<<"Have Wall"<<std::endl;
+            for (int y = 1; y < bufferHeight; y++) {
+                for (int x = 1; x < bufferWidth; x++) {
+                    // if (x<bufferHeight/2+10&&x>bufferHeight/2&&y<bufferHeight-10) {
+                        fluidsim.setCellBehavior(x,y,0b00000001);
+                    // }
+                }
+            }
+        }
 
 
 
         int time=glfwGetTime();
 
-        if (imgui->shouldUpdate[0]) {
+        if (imgui->shouldUpdate) {
             if (last_number<timePassed) {
                 //
                 // int width=current_cell_buffer.return_width();
@@ -197,36 +220,55 @@ int main()
 
                 // fluidsim.updateVelocity();
 
-                fluidsim.overrideNumSettlingIterations(imgui->numOfSettlingItterations[0]);
-                fluidsim.overrideOverRelaxationValue(imgui->overRelaxationValue[0]);
+                fluidsim.overrideNumSettlingIterations(imgui->numOfSettlingItterations);
+                fluidsim.overrideOverRelaxationValue(imgui->overRelaxationValue);
 
 
 
 
 
-                float timeStep = imgui->timestep[0];
+                float timeStep = imgui->timestep;
 
 
-                // fluidsim.applyAcelerations(timeStep);
-                // fluidsim.defuseVelocityImplicit(timeStep);
-                // fluidsim.defuseDyeDensityImplicit(timeStep);
+                fluidsim.defuseDyeDensityImplicit(-timeStep*30);
 
-                for(int i=0;i<bufferWidth-10;i++) {
-                        fluidsim.setVelocityValueP(i,1,0,10);
-            }
+                // for(int i=0;i<bufferWidth-10;i++) {
+                //         fluidsim.setVelocityValueP(i,bufferHeight-1,1,10);
+                // }
+                // for(int i=0;i<bufferWidth-10;i++) {
+                //     fluidsim.setVelocityValueP(i,1,1,10);
+                // }
 
 
+                // for(int i=0;i<bufferWidth-0;i++) {
+                //     fluidsim.setVelocityValueP(i,bufferHeight-1,0,10);
+                //     fluidsim.setVelocityValueP(i,0,0,0);
+                // }
+                // for (int j=0;j <= bufferHeight; j++) {
+                //     fluidsim.setVelocityValueP(0,j,0,0);
+                //     fluidsim.setVelocityValueP(0,j,1,0);
+                //     fluidsim.setVelocityValueP(bufferWidth-1,j,0,0);
+                //     fluidsim.setVelocityValueP(bufferWidth-1,j,1,0);
+                // }
 
+                for (int x = 0; x < bufferWidth; x++) {
+                    fluidsim.setCellBehavior(x, 0, 0);                 // Bottom Wall
+                    fluidsim.setCellBehavior(x, bufferHeight - 1, 0); // Top Wall
+                }
+                float windSpeed = 5.0f;
+                for (int y = 1; y < bufferHeight - 1; y++) {
+                    // Force X-velocity at the left edge
+                    fluidsim.setVelocityValueP(0, y, 0, windSpeed);
+                    fluidsim.setVelocityValueC(0, y, 0, windSpeed);
+
+                    // Continuous Smoke/Dye injection
+                    if (y % 10 == 0) { // Create streamers
+                        fluidsim.setdyeDensityValueP(1, y, 2000.0f);
+                    }
+                }
                 fluidsim.advectVelocityAndDyeDensity(timeStep);
-
-                // fluidsim.defuseVelocityImplicit(timeStep);
-
                 fluidsim.applyIncompressibility(timeStep);
-
-
                 fluidsim.swapCurrentArrayWithPrevious();
-
-
                 last_number=timePassed;
             }
         }
@@ -235,49 +277,67 @@ int main()
 
 
         current_cell_buffer.set_current_index(0,0);
-        if (imgui->renderType[0]==0) {
+        if (imgui->renderType==0) {
             for (int y = 0; y < bufferHeight; y++) {
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
 
-                    int value=fluidsim.getDyeDensityValueC(x,y);
+                    int value=std::min(fluidsim.getDyeDensityValueC(x,y),255.0f);
+                    int rvalue=value;
+                    int gvalue=value;
+                    int bvalue=value;
 
-                    imageData[index] = value;     // Red
-                    imageData[index + 1] =value ; // Green
-                    imageData[index + 2] = value; // Blue
+                    if (fluidsim.getCellBehavior(x,y)==0) {
+                        rvalue=50;
+                        gvalue=100;
+                        bvalue=120;
+                    }
+
+                    imageData[index] = rvalue;     // Red
+                    imageData[index + 1] =gvalue ; // Green
+                    imageData[index + 2] = bvalue; // Blue
                     imageData[index + 3] = 255; // Alpha
                 }
             }
         }
-        else if (imgui->renderType[0]==1) {
+        else if (imgui->renderType==1) {
             for (int y = 0; y < bufferHeight; y++) {
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4;
 
 
-                    float vx = fluidsim.getVelocityValueC(x,y,0)*30;
-                    float vy = fluidsim.getVelocityValueC(x,y,1)*30;
+                    float vx = abs(fluidsim.getVelocityValueC(x,y,0)*30);
+                    float vy = abs(fluidsim.getVelocityValueC(x,y,1)*30);
+
+                    float rvalue= std::min(vx,255.0f);
+                    float gvalue= std::min(vy,255.0f);
+                    float bvalue= 0;
+                    if (fluidsim.getCellBehavior(x,y)==0) {
+                        rvalue=50;
+                        gvalue=100;
+                        bvalue=120;
+                    }
 
 
 
-                    imageData[index] = vx;     // Red (X velocity)
-                    imageData[index + 1] = vy; // Green (Y velocity)
-                    imageData[index + 2] = 0;      // Blue
+                    imageData[index] = rvalue;     // Red (X velocity)
+                    imageData[index + 1] = gvalue; // Green (Y velocity)
+                    imageData[index + 2] = bvalue;      // Blue
                     imageData[index + 3] = 255;    // Alpha
                 }
             }
         }
-        else if (imgui->renderType[0]==2) {
+        else if (imgui->renderType==2) {
 
             for (int y = 0; y < bufferHeight; y++) {
                 for (int x = 0; x < bufferWidth; x++) {
                     int index = (y * bufferWidth + x) * 4; // 4 channels (RGBA)
-                    int result=fluidsim.getCellBehavior(x,y,0);
+                    int result=fluidsim.getCellBehavior(x,y);
                     int gvalue=0;
                     if (result==0b000001) {
                         gvalue=255;
                     }
-                    int rvalue=fluidsim.getCellBehavior(x,y,0);
+                    int rvalue=fluidsim.getCellBehavior(x,y);
 
 
                     imageData[index] = rvalue;     // Red

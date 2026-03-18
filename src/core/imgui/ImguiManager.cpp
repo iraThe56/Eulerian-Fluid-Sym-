@@ -1,9 +1,6 @@
 #include "ImguiManager.h"
-
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
-
-#include "GLFW/glfw3.h"
 
 ImguiManager* ImguiManager::instance = nullptr;
 
@@ -14,7 +11,8 @@ ImguiManager* ImguiManager::getInstance() {
     return instance;
 }
 
-void ImguiManager::init(GLFWwindow *window) {
+void ImguiManager::init(GLFWwindow *window,float inputed_sidebarWidth) {
+    sidebarWidth = inputed_sidebarWidth;
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
@@ -28,30 +26,50 @@ void ImguiManager::render() {
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // Example window
-    ImGui::Begin("Hello Ira :3");
-    ImGui::Text("It works!");
-    ImGui::Checkbox("Should Update?", shouldUpdate);
-    ImGui::Checkbox("Should Draw?", shouldDraw);
+    // --- DOCKING TO THE RIGHT LOGIC ---
+
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+    // Set position to the right edge of the viewport
+    ImVec2 work_pos = viewport->WorkPos;
+    ImVec2 work_size = viewport->WorkSize;
+    ImVec2 window_pos = ImVec2(work_pos.x + work_size.x - sidebarWidth, work_pos.y);
+    ImVec2 window_size = ImVec2(sidebarWidth, work_size.y);
+
+    ImGui::SetNextWindowPos(window_pos);
+    ImGui::SetNextWindowSize(window_size);
+
+    // Window flags to make it feel "docked"
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoMove |
+                                    ImGuiWindowFlags_NoResize |
+                                    ImGuiWindowFlags_NoCollapse;
+
+    if (ImGui::Begin("Simulation Controls", nullptr, window_flags)) {
+        ImGui::Text("Settings");
+        ImGui::Separator();
 
 
-    ImGui::DragInt("render type",renderType,.01,0,2);
+        ImGui::Checkbox("Should Update?", &shouldUpdate);
+        ImGui::Checkbox("Should Draw?", &shouldDraw);
+        ImGui::Checkbox("Add the wall?", &shouldHaveWall);
 
+        ImGui::Separator();
+        ImGui::DragInt("Render type", &renderType, .1f, 0, 2);
 
+        if (ImGui::Button("Reset")) {
+            shouldReset = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset Dye")) {
+            shouldResetDye = true;
+        }
 
-    if (ImGui::Button("Reset")) {
-        shouldReset=true;
+        ImGui::Separator();
+        ImGui::DragFloat("Timestep", &timestep, 0.006f);
+        ImGui::DragFloat("Over relaxation", &overRelaxationValue, 0.006f, 1.0f, 4.0f);
+        ImGui::SliderInt("Settling Iterations", &numOfSettlingItterations, 3, 200);
+        ImGui::SliderInt("Acceleration Type", &acelerationType, 0, 2);
     }
-    if (ImGui::Button("Reset Dye")) {
-        shouldResetDye=true;
-    }
-
-
-
-    ImGui::DragFloat("timestep",timestep,.006);
-    ImGui::DragFloat("over relaxation Value",overRelaxationValue,.006,1,4);
-    ImGui::DragInt("number of settling itterations",numOfSettlingItterations,.06,3,200);
-    ImGui::DragInt("acelerationType",acelerationType,1,1,2);
     ImGui::End();
 
     ImGui::Render();

@@ -21,7 +21,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     numDimensions=2;
     //calculating the array peramaters
     padding=10;
-    paddingStyle=3;
+    paddingStyle=0;
     cellBehaviorState=0;
     acelerationBehavior=1;
 
@@ -49,6 +49,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     /// setting padding values
     applyPaddingStyle(paddingStyle);
     applyStartingConditions(startingCondition);
+    acelerationBehavior=0;
 
     std::copy_n(velocityValuesP, velocityArrayLength, velocityValuesC);
     std::copy_n(dyeDensityValuesP, dyeDensityArrayLength, dyeDensityValuesC);
@@ -67,7 +68,7 @@ FluidSim::~FluidSim() {
 }
 
 
-int FluidSim::calculatedyeDensityIndex(const int x, const int y) const {
+int FluidSim::calculateDyeDensityIndex(const int x, const int y) const {
     // if (x<0||x>array_width-1||y<0||y>array_height-1) {
     //     throw std::out_of_range("FluidSim::calculatedyeDensityIndex");
     // }
@@ -92,33 +93,33 @@ int FluidSim::calculateBehaviorIndex(int x, int y) const {
 ///getting and setting values
 
 // returning values
-float FluidSim::getDyeDensityValueC(const int x,const int y) const {
+ float FluidSim::getDyeDensityValueC(const int x,const int y) const {
     return dyeDensityValuesC[(y+padding) * array_width +(x+padding)];
 }
-float FluidSim::getVelocityValueC(const int x,const int y,const int dimension) const {
+ float FluidSim::getVelocityValueC(const int x,const int y,const int dimension) const {
     return velocityValuesC[(y + padding) * ((array_width + 1) * numDimensions) + (x + padding) * numDimensions+dimension];
 }
-float FluidSim::getDyeDensityValueP(const int x,const int y) const {
+ float FluidSim::getDyeDensityValueP(const int x,const int y) const {
     return dyeDensityValuesP[(y+padding) * array_width +(x+padding)];
 }
-float FluidSim::getVelocityValueP(const int x,const int y,const int dimension) const {
+inline float FluidSim::getVelocityValueP(const int x,const int y,const int dimension) const {
     return velocityValuesP[(y + padding) * ((array_width + 1) * numDimensions) + (x + padding) * numDimensions+dimension];
 }
 
-uint32_t FluidSim::getCellBehavior(const int x, const int y, const int behaviorPart) const {
-    if (behaviorPart==0) {
+uint32_t FluidSim::getCellBehavior(const int x, const int y) const {
+    // if (behaviorPart==0) {
         return cellBehavior[(y+padding) * array_width +(x+padding)];
-    }
-    else if (behaviorPart==1) {
-        return cellBehavior[(y+padding) * array_width +(x+padding)]&0b00000001;
-    }
-    throw std::out_of_range("FluidSim::no get cellBehavior provided");
+    // }
+    // else if (behaviorPart==1) {
+    //     return cellBehavior[(y+padding) * array_width +(x+padding)]&0b00000001;
+    // }
+    // throw std::out_of_range("FluidSim::no get cellBehavior provided");
 }
 
 
 
 // setting values
-void FluidSim::setdyeDensityValueC(const int x,const int y,const float value) const {
+inline void FluidSim::setdyeDensityValueC(const int x,const int y,const float value) const {
     dyeDensityValuesC[(y+padding) * array_width +(x+padding)]=value;
 }
 void FluidSim::setVelocityValueC(const int x,const int y,const int dimension,const float value) const {
@@ -153,8 +154,8 @@ void FluidSim::defuseDyeDensityExplicit(const float dt) const {
     for (int i=0;i<sim_width;i++) {
         for (int j=0;j<sim_height;j++) {
 
-            const int index=calculatedyeDensityIndex(i,j);
-            if (getCellBehavior(i,j,1)==1) {
+            const int index=calculateDyeDensityIndex(i,j);
+            if (getCellBehavior(i,j)==1) {
                 dyeDensityValuesC[index]=dyeDensityValuesP[index]+k*((dyeDensityValuesP[index+1]+dyeDensityValuesP[index-1]+dyeDensityValuesP[index-array_width]+dyeDensityValuesP[index+array_width])/4-dyeDensityValuesP[index])*dt;
             }
         }
@@ -164,8 +165,8 @@ void FluidSim::defuseDyeDensityImplicit(const float dt) const {
     for (int iter = 0; iter < numSettlingIterations; iter++){
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
-                const int index=(y+padding) * array_width +(x+padding);
-                if (getCellBehavior(x,y,0)==1) {
+                const int index=getCellBehavior(x,y);
+                if (getCellBehavior(x,y)==1) {
                     dyeDensityValuesC[index]=(dyeDensityValuesP[index]+k*dt*((dyeDensityValuesC[index+1]+dyeDensityValuesC[index-1]+dyeDensityValuesC[index-array_width]+dyeDensityValuesC[index+array_width])/4))/(1+k*dt);
                 }
 
@@ -182,7 +183,7 @@ void FluidSim::defuseVelocityImplicit(const float dt) const {
             for (int x = 0; x < sim_width; x++) {
 
                 // Only diffuse if this is a fluid cell
-                if (getCellBehavior(x, y, 0) == 1) {
+                if (getCellBehavior(x, y) == 1) {
 
                     // ------------------------------------------
                     // 1. Diffuse X-Velocity (Dimension 0)
@@ -222,11 +223,6 @@ void FluidSim::defuseVelocityImplicit(const float dt) const {
                 }
             }
         }
-
-        // OPTIONAL BUT RECOMMENDED:
-        // After every diffusion iteration, you strictly should enforce boundary conditions
-        // (set walls to 0) so the diffusion doesn't "leak" non-zero values into the walls.
-        // For a simple sim, doing it once at the end of the function is usually enough.
     }
 }
 
@@ -235,55 +231,57 @@ void FluidSim::applyIncompressibility( int timestep) const {
         for (int y = 0; y < sim_height; y++) {
             for (int x = 0; x < sim_width; x++) {
                 int numOfNearbyActiveCells=0;
-                if (getCellBehavior(x,y,0)==1) {
 
+                //check if it's a cell that should be updated
+                if (getCellBehavior(x,y)==1) {
 
                 //cheeck sorunoung 4 cells
-                numOfNearbyActiveCells += getCellBehavior(x-1, y, 1);
-                numOfNearbyActiveCells += getCellBehavior(x+1, y, 1);
-                numOfNearbyActiveCells += getCellBehavior(x, y-1, 1);
-                numOfNearbyActiveCells += getCellBehavior(x, y+1, 1);
+                numOfNearbyActiveCells += getCellBehavior(x-1, y);
+                numOfNearbyActiveCells += getCellBehavior(x+1, y);
+                numOfNearbyActiveCells += getCellBehavior(x, y-1);
+                numOfNearbyActiveCells += getCellBehavior(x, y+1);
 
-
-                float leftVelocity   = getVelocityValueC(x, y, 0);
-                float rightVelocity  = getVelocityValueC(x+1, y, 0);
-                float topVelocity    = getVelocityValueC(x, y, 1);
-                float bottomVelocity = getVelocityValueC(x, y+1, 1);
+                if (numOfNearbyActiveCells == 0) continue;
+                float leftVelocity   = (getCellBehavior(x-1, y) == 1) ? getVelocityValueC(x, y, 0)   : 0.0f;
+                float rightVelocity  = (getCellBehavior(x+1, y) == 1) ? getVelocityValueC(x+1, y, 0) : 0.0f;
+                float topVelocity    = (getCellBehavior(x, y-1) == 1) ? getVelocityValueC(x, y, 1)   : 0.0f;
+                float bottomVelocity = (getCellBehavior(x, y+1) == 1) ? getVelocityValueC(x, y+1, 1) : 0.0f;
 
                 float divergence = overRelxationValue*((rightVelocity - leftVelocity) + (bottomVelocity - topVelocity));
-
                 float divergenceToEachCell=divergence/numOfNearbyActiveCells;
+                if (getCellBehavior(x-1, y) == 1) {
 
-                if (getCellBehavior(x-1, y, 1) == 1) {
-                    // Left face needs to push right (positive X direction)
                     setVelocityValueC(x, y, 0, leftVelocity + divergenceToEachCell);
+                } else {
+                    setVelocityValueC(x, y, 0, 0.0f);
                 }
-                if (getCellBehavior(x+1, y, 1) == 1) {
-                    // Right face needs to push left (negative X direction)
+
+                if (getCellBehavior(x+1, y) == 1) {
                     setVelocityValueC(x+1, y, 0, rightVelocity - divergenceToEachCell);
+                } else {
+                    setVelocityValueC(x+1, y, 0, 0.0f);
                 }
-                if (getCellBehavior(x, y-1, 1) == 1) {
-                    // Top face needs to push down (positive Y direction)
+
+                if (getCellBehavior(x, y-1) == 1) {
                     setVelocityValueC(x, y, 1, topVelocity + divergenceToEachCell);
+                } else {
+                    setVelocityValueC(x, y, 1, 0.0f);
                 }
-                if (getCellBehavior(x, y+1, 1) == 1) {
-                    // Bottom face needs to push up (negative Y direction)
+
+                if (getCellBehavior(x, y+1) == 1) {
                     setVelocityValueC(x, y+1, 1, bottomVelocity - divergenceToEachCell);
+                } else {
+                    setVelocityValueC(x, y+1, 1, 0.0f);
                 }
+
                 }
-
-
-
-
-
             }
         }
     }
-
-
 }
 
 float FluidSim::interpolateDensity(float x, float y) const {
+
     // 1. Shift coordinates because density lives at cell centers (0.5 offset)
     float shiftedX = x - 0.5f;
     float shiftedY = y - 0.5f;
@@ -298,22 +296,20 @@ float FluidSim::interpolateDensity(float x, float y) const {
     float tx = shiftedX - (float)i0;
     float ty = shiftedY - (float)j0;
 
-    // 4. Clamp indices to prevent reading outside the simulation bounds
-    // (Your getters handle padding under the hood, so 0 to sim_width-1 is correct here)
     i0 = std::clamp(i0, 0, sim_width - 1);
     i1 = std::clamp(i1, 0, sim_width - 1);
     j0 = std::clamp(j0, 0, sim_height - 1);
     j1 = std::clamp(j1, 0, sim_height - 1);
 
     // 5. Fetch the 4 surrounding density (pressure) values
-    float d00 = getDyeDensityValueP(i0, j0); // Top-Left
-    float d10 = getDyeDensityValueP(i1, j0); // Top-Right
-    float d01 = getDyeDensityValueP(i0, j1); // Bottom-Left
-    float d11 = getDyeDensityValueP(i1, j1); // Bottom-Right
+    const float d00 = getDyeDensityValueP(i0, j0); // Top-Left
+    const float d10 = getDyeDensityValueP(i1, j0); // Top-Right
+    const float d01 = getDyeDensityValueP(i0, j1); // Bottom-Left
+    const float d11 = getDyeDensityValueP(i1, j1); // Bottom-Right
 
-    // 6. Bilinear Interpolation
-    float top    = d00 + tx * (d10 - d00);
-    float bottom = d01 + tx * (d11 - d01);
+    // 6. Bilinear Interpolation woop woop
+    const float top    = d00 + tx * (d10 - d00);
+    const float bottom = d01 + tx * (d11 - d01);
     float finalValue = top + ty * (bottom - top);
 
     return finalValue;
@@ -329,7 +325,7 @@ float FluidSim::interpolateVelocity(float x, float y, int dimension) const {
         // X-Velocity: centered on the Y-axis (offset by 0.5 in Y)
         shiftedY -= 0.5f;
     } else if (dimension == 1) {
-        // Y-Velocity: centered on the X-axis (offset by 0.5 in X)
+        // this part is weird but because of how Y-Velocity is centered on the X-axis (offset by 0.5 in X)
         shiftedX -= 0.5f;
     }
 
@@ -339,7 +335,7 @@ float FluidSim::interpolateVelocity(float x, float y, int dimension) const {
     int i1 = i0 + 1;
     int j1 = j0 + 1;
 
-    // Calculate the interpolation weights
+
     float tx = shiftedX - (float)i0;
     float ty = shiftedY - (float)j0;
 
@@ -379,9 +375,7 @@ void FluidSim::advectVelocityAndDyeDensity(const float timestep) const {
 
     for (int y = 0; y < sim_height; y++) {
         for (int x = 0; x < sim_width; x++) {
-
-            // Skip solid cells
-            if (getCellBehavior(x, y, 1) == 0) continue;
+            if (getCellBehavior(x, y) == 0) continue;
 
             // ---------------------------------------------------------
             // STAGE 1: Advect X-Velocity (The Left Vertical Face)
@@ -451,19 +445,29 @@ void FluidSim::advectVelocityAndDyeDensity(const float timestep) const {
 
 
 // void FluidSim::applyAcelerations(const float dt) const {
-//     if (1==1) {
+//  if ace
+//     if (==1) {
 //         for (int y = 0; y < sim_height; y++) {
 //             for (int x = 0; x < sim_width; x++) {
-//                 // setVelocityValueC(x,y,0,(getVelocityValueP(x,y,0)));
-//                 // setVelocityValueC(x,y,1,(getVelocityValueP(x,y,1)+(3*dt)));
+//                 setVelocityValueC(x,y,0,(getVelocityValueP(x,y,0)));
+//                 setVelocityValueC(x,y,1,(getVelocityValueP(x,y,1)+(2*dt)));
 //             }
 //         }
 //     }
-//
+
 //
 // }
 
 
+void FluidSim::setDyeToZero() const {
+    for (int y = 0; y < sim_height; y++) {
+        for (int x = 0; x < sim_width; x++) {
+            setdyeDensityValueP(x,y,0);
+            setdyeDensityValueC(x,y,0);
+
+        }
+    }
+}
 
 
 
@@ -473,7 +477,7 @@ void FluidSim::applyPaddingStyle(const int paddingStyle) const {
     if (paddingStyle == 0) {
         for (int i=0;i<dyeDensityArrayLength;i++) {
             dyeDensityValuesP[i]=0;
-            cellBehavior[i] = 0;
+            cellBehavior[i] = 1;
         }
         for (int i=0;i<velocityArrayLength;i++) {
             velocityValuesP[i]=0;
@@ -545,7 +549,47 @@ void FluidSim::applyStartingConditions( int startingCondition) const {
             }
         }
     }
+    if (startingCondition==3) {
+        for (int y = 0; y < sim_height; y++) {
+            for (int x = 0; x < sim_width; x++) {
+                int shiftedx=x-50;
+                int shiftedy=y-50;
+                if (shiftedx*shiftedx+shiftedy*shiftedy<100) {
+                    setCellBehavior(x,y,0);
+                }
+                else {
+                    setdyeDensityValueP(x,y,0);
+                    setVelocityValueP(x,y,0,2);
+                    setVelocityValueP(x,y,1,3);
+                    setCellBehavior(x,y,0b00000001);
+                }
+            }
+        }
+    }
+    if (startingCondition == 4) {
+
+
+        for (int y = 0; y < sim_height; y++) {
+            for (int x = 0; x < sim_width; x++) {
+                // Set everything to Fluid (1) by default
+                setCellBehavior(x, y, 1);
+
+                // Set Top and Bottom rows to Wall (0) to contain the wind
+                if (y == 0 || y == sim_height - 1) {
+                    setCellBehavior(x, y, 0);
+                    setVelocityValueP(x, y, 0, 0);
+                    setVelocityValueP(x, y, 1, 0);
+                } else {
+                    // Initial wind speed inside the tunnel
+                    setVelocityValueP(x, y, 0, 5.0f);
+                    setVelocityValueP(x, y, 1, 0);
+                }
+                setdyeDensityValueP(x, y, 0);
+            }
+        }
+    }
 }
+
 
 
 
