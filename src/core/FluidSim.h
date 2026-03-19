@@ -23,6 +23,8 @@ class FluidSim {
     void applyPaddingStyle(int paddingStyle) const;
     void applyStartingConditions(int startingConditions) const;
     void applyCellBehavior();
+    int paddingStyle;
+    int startingCondition;
 
 
 
@@ -35,15 +37,15 @@ class FluidSim {
     // to access padded cells you can go larger or smaller than buffer width and height
     // but if you do it won't check for you that your reading out into raw memory
 
-    [[nodiscard]]  int calculateDyeDensityIndex(int x,int y) const;
-    [[nodiscard]]  int calculateVelocityIndex(int x,int y) const ;
+    [[nodiscard]] inline  int calculateDyeDensityIndex(int x,int y) const;
+    [[nodiscard]] inline int calculateVelocityIndex(int x,int y) const ;
 
-    [[nodiscard]]  int calculateBehaviorIndex(int x,int y) const;
+    [[nodiscard]] inline int calculateBehaviorIndex(int x,int y) const;
 
     // returning values
 
-    [[nodiscard]]  float getDyeDensityValueC(int x,int y) const;
-    [[nodiscard]]  float getVelocityValueC(int x,int y,int dimension) const;
+    [[nodiscard]] float getDyeDensityValueC(int x,int y) const;
+    [[nodiscard]]   float getVelocityValueC(int x,int y,int dimension) const;
 
     [[nodiscard]]  float getDyeDensityValueP(int x,int y) const;
     [[nodiscard]]  float getVelocityValueP(int x,int y,int dimension) const;
@@ -122,8 +124,7 @@ class FluidSim {
     int numDimensions;
 
     float k;
-    int paddingStyle;
-    int startingCondition;
+
 
     int cellBehaviorState;
     int numSettlingIterations;

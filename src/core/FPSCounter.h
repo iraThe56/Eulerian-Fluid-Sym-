@@ -13,11 +13,14 @@ public:
     FPSCounter();
     void calculate_fps();
 
+    int frameRate;
+
 
 private:
     double lastTime ;
     double currentTime;
     int nbFrames;
+
 
 };
 
