@@ -8,3 +8,4 @@ the code is spread across 3 main files,
 1. `Main.cpp` which renders to the screen and applies the simulation updates
 2. `Fluidsim.cpp` that contains the buffers for the fluid sim and helper methods to run the simulation 
 3. and `ImguiManager.cpp` which contains the customization for the right sided UI
+![Wind tunnle image.png](resources/Wind%20tunnle%20image.png)
