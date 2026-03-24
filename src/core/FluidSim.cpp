@@ -12,14 +12,14 @@
 
 FluidSim::FluidSim(const int width, const int height,int startingConditions) {
 
-    // initlizing values
+    // initializing values
     sim_width=width;
     sim_height=height;
     k=10;
     startingCondition =startingConditions;
     //used for creating and indexing the arrays
     numDimensions=2;
-    //calculating the array peramaters
+    //calculating the array parameters
     padding=10;
     paddingStyle=0;
     cellBehaviorState=0;
@@ -30,7 +30,7 @@ FluidSim::FluidSim(const int width, const int height,int startingConditions) {
     numSettlingIterations=10;
 
 
-    // to acount for using a stagered grid we must add one to both x and y for the velcotie valyes
+    // to account for using a staggered grid we must add one to both x and y for the velocities values
     // 0,0 is the top right corner
     dyeDensityArrayLength=array_width*array_height;
     velocityArrayLength=(array_width+1)*(array_height+1)*numDimensions;
@@ -140,15 +140,16 @@ void FluidSim::setCellBehavior(int x, int y, uint32_t value) const {
 
 
 
-// swap buffers (shoudl only be called at the end to an update
+// swap buffers (should only be called at the end to an update
 void FluidSim::swapCurrentArrayWithPrevious() {
+
     std::swap(dyeDensityValuesP,dyeDensityValuesC);
     std::swap(velocityValuesP,velocityValuesC);
 }
 
 
 ///implementing basic functions
-///
+
 
 void FluidSim::defuseDyeDensityExplicit(const float dt) const {
     for (int i=0;i<sim_width;i++) {
@@ -284,37 +285,40 @@ void FluidSim::applyIncompressibility( int timestep) const {
 
 float FluidSim::interpolateDensity(float x, float y) const {
 
-    // 1. Shift coordinates because density lives at cell centers (0.5 offset)(am not fully sure why the half works but my reserch said it would)
+    //shift coordinates because density lives at cell centers (0.5 offset)
+    //(am not fully sure why the half works but my reserch said it would)
     float shiftedX = x - 0.5f;
     float shiftedY = y - 0.5f;
 
-    // 2. Find the array index of the top-left cell center
-    int i0 = std::floor(shiftedX);
-    int j0 = std::floor(shiftedY);
-    int i1 = i0 + 1;
-    int j1 = j0 + 1;
+    //find the array index of the top-left cell center
+    int leftCellX = std::floor(shiftedX);
+    int topCellY = std::floor(shiftedY);
+    int rightCellX = leftCellX + 1;
+    int bottomCellY = topCellY + 1;
 
-    // 3. Calculate the interpolation weights (fractional part)
-    float tx = shiftedX - (float)i0;
-    float ty = shiftedY - (float)j0;
+    //calculate the interpolation weights
+    const float horizontalWeight = shiftedX - (float)leftCellX;
+    const float verticalWeight = shiftedY - (float)topCellY;
 
-    i0 = std::clamp(i0, 0, sim_width - 1);
-    i1 = std::clamp(i1, 0, sim_width - 1);
-    j0 = std::clamp(j0, 0, sim_height - 1);
-    j1 = std::clamp(j1, 0, sim_height - 1);
+    //clamp
+    leftCellX = std::clamp(leftCellX, 0, sim_width - 1);
+    rightCellX = std::clamp(rightCellX, 0, sim_width - 1);
+    topCellY = std::clamp(topCellY, 0, sim_height - 1);
+    bottomCellY = std::clamp(bottomCellY, 0, sim_height - 1);
 
-    // 5. Fetch the 4 surrounding density (pressure) values
-    const float d00 = getDyeDensityValueP(i0, j0); // Top-Left
-    const float d10 = getDyeDensityValueP(i1, j0); // Top-Right
-    const float d01 = getDyeDensityValueP(i0, j1); // Bottom-Left
-    const float d11 = getDyeDensityValueP(i1, j1); // Bottom-Right
+    //fetch the 4 surrounding density values
+    const float topLeftDensity     = getDyeDensityValueP(leftCellX, topCellY);
+    const float topRightDensity    = getDyeDensityValueP(rightCellX, topCellY);
+    const float bottomLeftDensity  = getDyeDensityValueP(leftCellX, bottomCellY);
+    const float bottomRightDensity = getDyeDensityValueP(rightCellX, bottomCellY);
 
-    // 6. Bilinear Interpolation woop woop
-    const float top    = d00 + tx * (d10 - d00);
-    const float bottom = d01 + tx * (d11 - d01);
-    float finalValue = top + ty * (bottom - top);
+    //bilinear interpolation woop woop
+    const float topInterpolatedDensity    = topLeftDensity + horizontalWeight * (topRightDensity - topLeftDensity);
+    const float bottomInterpolatedDensity = bottomLeftDensity + horizontalWeight * (bottomRightDensity - bottomLeftDensity);
 
-    return finalValue;
+    const float finalInterpolatedDensity  = topInterpolatedDensity + verticalWeight * (bottomInterpolatedDensity - topInterpolatedDensity);
+
+    return finalInterpolatedDensity;
 }
 
 
@@ -322,53 +326,46 @@ float FluidSim::interpolateVelocity(float x, float y, int dimension) const {
     float shiftedX = x;
     float shiftedY = y;
 
-    // Apply the MAC grid offset based on which velocity face we are interpolating
+    //shift coordinates to handle the MAC grid
     if (dimension == 0) {
-        // X-Velocity: centered on the Y-axis (offset by 0.5 in Y)
         shiftedY -= 0.5f;
     } else if (dimension == 1) {
-        // this part is weird but because of how Y-Velocity is centered on the X-axis (offset by 0.5 in X)
         shiftedX -= 0.5f;
     }
 
-    // Find the array index of the top-left velocity face
-    int i0 = std::floor(shiftedX);
-    int j0 = std::floor(shiftedY);
-    int i1 = i0 + 1;
-    int j1 = j0 + 1;
+    //find the array index of the top-left velocity face
+    int leftCellX = std::floor(shiftedX);
+    int topCellY = std::floor(shiftedY);
+    int rightCellX = leftCellX + 1;
+    int bottomCellY = topCellY + 1;
 
 
-    float tx = shiftedX - (float)i0;
-    float ty = shiftedY - (float)j0;
+    const float horizontalWeight = shiftedX - (float)leftCellX;
+    const float verticalWeight = shiftedY - (float)topCellY;
 
-    // Clamp indices.
-    // Because the MAC grid velocity arrays are (sim_width + 1) and (sim_height + 1),
-    // the valid face indices go from 0 up to EXACTLY sim_width and sim_height.
-    int maxX = sim_width;
-    int maxY = sim_height;
+    //clamp all of the cell coordinates to stay inside the grid
+    const int maxX = sim_width;
+    const int maxY = sim_height;
 
-    // (Optional optimization: you can tighten these bounds based on the dimension,
-    // e.g., max X-velocity index is sim_width, but max Y-index for X-vel is sim_height - 1.
-    // But because of your padding setup, just clamping to sim_width/sim_height is perfectly safe.)
-    i0 = std::clamp(i0, 0, maxX);
-    i1 = std::clamp(i1, 0, maxX);
-    j0 = std::clamp(j0, 0, maxY);
-    j1 = std::clamp(j1, 0, maxY);
+    leftCellX = std::clamp(leftCellX, 0, maxX);
+    rightCellX = std::clamp(rightCellX, 0, maxX);
+    topCellY = std::clamp(topCellY, 0, maxY);
+    bottomCellY = std::clamp(bottomCellY, 0, maxY);
 
-    // Fetch the 4 surrounding velocity values
-    float v00 = getVelocityValueP(i0, j0, dimension);
-    float v10 = getVelocityValueP(i1, j0, dimension);
-    float v01 = getVelocityValueP(i0, j1, dimension);
-    float v11 = getVelocityValueP(i1, j1, dimension);
+    //get the 4 surrounding velocity values
+    const float topLeftVelocity     = getVelocityValueP(leftCellX, topCellY, dimension);
+    const float topRightVelocity    = getVelocityValueP(rightCellX, topCellY, dimension);
+    const float bottomLeftVelocity  = getVelocityValueP(leftCellX, bottomCellY, dimension);
+    const float bottomRightVelocity = getVelocityValueP(rightCellX, bottomCellY, dimension);
 
-    // Bilinear Interpolation
-    float top    = v00 + tx * (v10 - v00);
-    float bottom = v01 + tx * (v11 - v01);
-    float finalValue = top + ty * (bottom - top);
+    //bilinear interpolation
+    const float topInterpolatedVelocity = topLeftVelocity + horizontalWeight * (topRightVelocity - topLeftVelocity);
+    const float bottomInterpolatedVelocity = bottomLeftVelocity + horizontalWeight * (bottomRightVelocity - bottomLeftVelocity);
 
-    return finalValue;
+    const float finalInterpolatedVelocity = topInterpolatedVelocity + verticalWeight * (bottomInterpolatedVelocity - topInterpolatedVelocity);
+
+    return finalInterpolatedVelocity;
 }
-
 
 
 void FluidSim::advectVelocityAndDyeDensity(const float timestep) const {
@@ -378,43 +375,25 @@ void FluidSim::advectVelocityAndDyeDensity(const float timestep) const {
     for (int y = 0; y < sim_height; y++) {
         for (int x = 0; x < sim_width; x++) {
             if (getCellBehavior(x, y) == 0) continue;
-
-            // ---------------------------------------------------------
-            // STAGE 1: Advect X-Velocity (The Left Vertical Face)
-            // Physical Location: (x, y + 0.5)
-            // ---------------------------------------------------------
             {
-                // Current X-velocity is right here on this face
                 float u = getVelocityValueP(x, y, 0);
-
-                // Y-velocity is the average of the 4 surrounding horizontal faces
-                // (This is the average you already figured out!)
                 float v_avg = (getVelocityValueP(x-1, y, 1)   + getVelocityValueP(x, y, 1) +
                                getVelocityValueP(x-1, y+1, 1) + getVelocityValueP(x, y+1, 1)) * 0.25f;
 
-                // Trace back from the PHYSICAL location (Note the +0.5 on Y!)
                 float prevX = x - (u * dt);
                 float prevY = (y + 0.5f) - (v_avg * dt);
 
-                // Interpolate and save to Current state
                 float newVelX = interpolateVelocity(prevX, prevY, 0);
                 setVelocityValueC(x, y, 0, newVelX);
             }
-
-            // ---------------------------------------------------------
-            // STAGE 2: Advect Y-Velocity (The Top Horizontal Face)
-            // Physical Location: (x + 0.5, y)
-            // ---------------------------------------------------------
             {
-                // Current Y-velocity is right here on this face
+
                 float v = getVelocityValueP(x, y, 1);
 
-                // X-velocity is the average of the 4 surrounding vertical faces
-                // (We need the two to the left/right, and the two above/below relative to this edge)
+
                 float u_avg = (getVelocityValueP(x, y, 0)   + getVelocityValueP(x+1, y, 0) +
                                getVelocityValueP(x, y-1, 0) + getVelocityValueP(x+1, y-1, 0)) * 0.25f;
 
-                // Trace back from the PHYSICAL location (Note the +0.5 on X!)
                 float prevX = (x + 0.5f) - (u_avg * dt);
                 float prevY = y - (v * dt);
 
@@ -423,20 +402,15 @@ void FluidSim::advectVelocityAndDyeDensity(const float timestep) const {
                 setVelocityValueC(x, y, 1, newVelY);
             }
 
-            // ---------------------------------------------------------
-            // STAGE 3: Advect Dye/Density (The Cell Center)
-            // Physical Location: (x + 0.5, y + 0.5)
-            // ---------------------------------------------------------
             {
                 // Velocity at the center is the average of the Left/Right faces and Top/Bottom faces
                 float u_center = (getVelocityValueP(x, y, 0) + getVelocityValueP(x+1, y, 0)) * 0.5f;
                 float v_center = (getVelocityValueP(x, y, 1) + getVelocityValueP(x, y+1, 1)) * 0.5f;
 
-                // Trace back from the PHYSICAL location (Note the +0.5 on BOTH!)
+                // Trace back from the location
                 float prevX = (x + 0.5f) - (u_center * dt);
                 float prevY = (y + 0.5f) - (v_center * dt);
 
-                // Interpolate using our special density interpolator
                 float newDensity = interpolateDensity(prevX, prevY);
                 setdyeDensityValueC(x, y, newDensity);
             }
@@ -623,4 +597,3 @@ void FluidSim::overrideOverRelaxationValue(float newOverRelaxationValue) {
 }
 
 
-// setting up basics
